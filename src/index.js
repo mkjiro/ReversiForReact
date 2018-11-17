@@ -2,7 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom';
 import './index.css';
 
-const MASUNUM = 9;
+const MASUNUM = 8;
 
 class Square extends React.Component {
   /*  constructor(){
@@ -42,25 +42,6 @@ class Board extends React.Component {
                </div>
        		  )}
 	  </div>
-	  /*
-		</div>
-		<div className="board-row">
-        {this.renderSquare(0)}
-        {this.renderSquare(1)}
-        {this.renderSquare(2)}
-        </div>
-        <div className="board-row">
-        {this.renderSquare(3)}
-        {this.renderSquare(4)}
-        {this.renderSquare(5)}
-        </div>
-        <div className="board-row">
-        {this.renderSquare(6)}
-        {this.renderSquare(7)}
-        {this.renderSquare(8)}
-        </div>
-		</div>
-	  */
     );
   }
 }
@@ -77,7 +58,11 @@ class Game extends React.Component {
 	  stepNumber:0,
 	  xIsNext:true,
 	};
-    console.log("a length:" + this.state.history[0].squares.length);
+    console.log("a length:" + JSON.stringify(this.state.history[0]["squares"][0][0]));
+    this.state.history[0]["squares"][parseInt(MASUNUM/2)][parseInt(MASUNUM/2)] = 'X';
+    this.state.history[0]["squares"][parseInt(MASUNUM/2)-1][parseInt(MASUNUM/2)] = 'O';
+    this.state.history[0]["squares"][parseInt(MASUNUM/2)][parseInt(MASUNUM/2)-1] = 'O';
+    this.state.history[0]["squares"][parseInt(MASUNUM/2)-1][parseInt(MASUNUM/2)-1] = 'X';
   }
   render() {
 	const history = this.state.history;
@@ -115,9 +100,13 @@ class Game extends React.Component {
 	var current = history[history.length -1];
 	//const squares = current.squares.slice();
     const squares = JSON.parse(JSON.stringify(current.squares));
-	if(calculateWinner(squares) || squares[j][i]){
-	  return;
+    //	if(calculateWinner(squares) || squares[j][i]){
+    let ap = searchReversiblePoints(squares,{y:j,x:i}, this.state.xIsNext ? 'X' : 'O');
+    console.log("ap length:" + ap.length);
+    if(ap.length === 0 || squares[j][i]){
+      return;
 	}
+    reverseKoma(squares,ap, this.state.xIsNext ? 'X' : 'O');
     console.log("history length:" + history.length);
 	squares[j][i] = this.state.xIsNext ? 'X' : 'O';
 	this.setState({history:history.concat([{squares:squares}]),
@@ -138,6 +127,57 @@ ReactDOM.render(
   <Game />,
   document.getElementById('container')
 );
+
+function isInBoard(p){
+  return (0 <= p.y && p.y < MASUNUM) && (0 <= p.x && p.x <= MASUNUM);
+}
+
+function searchReversibleDir(squares,p,dir,player){
+  let points = new Array(0);
+  let pp = {y:p.y,x:p.x};
+  pp.y += dir.y;
+  pp.x += dir.x;
+  let flag = false;
+  while(isInBoard(pp)){
+    if(player === squares[pp.y][pp.x]){
+      flag = true;
+      break;
+    }else if(squares[pp.y][pp.x] === null){
+      break;
+    }
+    points.push(Object.assign({},pp));
+    pp.y += dir.y;
+    pp.x += dir.x;   
+  }
+  if(flag){
+    return points;
+  }else{
+    return [];
+  }
+}
+/*
+  関数概要：反転可能なマスの探索
+  引数：squares ２次元配列, p 位置, player　プレイヤーの駒
+  戻り値：反転可能なマス列
+*/
+function searchReversiblePoints(squares,p,player){
+  let points = new Array(0);
+  for(let j = -1;j <= 1;j++){
+    for(let i = -1;i <= 1;i++){
+      if(j === 0 && i === 0)continue;
+      let ap = searchReversibleDir(squares,p,{y:j,x:i},player);
+      if(ap.length > 0)points = points.concat(ap);
+    }
+  }
+  return points;
+}
+
+function reverseKoma(squares,reversiblePoints,player){
+  for(let p of reversiblePoints){
+    console.log(p);
+    squares[p.y][p.x] = player;
+  }
+}
 
 function calculateWinner(squares) {
   const lines = [
